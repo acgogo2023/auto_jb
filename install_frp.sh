@@ -88,6 +88,12 @@ while true; do
   fi
 done
 
+# 提示用户输入 token 值
+read -p "请输入 token (默认值为 '12345678***'): " TOKEN
+if [ -z "$TOKEN" ]; then
+  TOKEN="12345678***"
+fi
+
 if [ "$CHOICE" = "FRPC" ]; then
   # 提示用户输入FRPC配置
   read -p "请输入服务器地址 (server_addr) [服务端的IP]: " SERVER_ADDR
@@ -107,12 +113,14 @@ if [ "$CHOICE" = "FRPC" ]; then
 
   # 更新 frpc.toml 文件
   cat > frpc.toml <<EOL
+
 [common]
 server_addr = $SERVER_ADDR
 server_port = $SERVER_PORT
 log_file = "frpc.log"
 log_level = "info"
 log_max_days = 1
+token = $TOKEN
 
 [$HTTP_PROXY_NAME]
 type = tcp
@@ -180,6 +188,7 @@ bind_port = $FRPS_PORT
 log_file = "frps.log"
 log_level = "info"
 log_max_days = 1
+token = $TOKEN
 
 [auth]
 auth_user = $AUTH_USER
