@@ -1,3 +1,5 @@
+# 创建脚本文件
+cat > v2rayn-manager.sh << 'EOF'
 #!/bin/bash
 
 # v2rayN 管理脚本
@@ -50,7 +52,7 @@ show_help() {
     uninstall  卸载 v2rayN
     update     更新 v2rayN
     status     检查 v2rayN 状态
-    help      显示此帮助信息
+    help       显示此帮助信息
 
 示例:
     $SCRIPT_NAME install    # 安装 v2rayN
@@ -249,3 +251,13 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
+EOF
+
+# 转换换行符（确保是Unix格式）
+sed -i 's/\r$//' v2rayn-manager.sh
+
+# 赋予执行权限
+chmod +x v2rayn-manager.sh
+
+# 运行脚本
+./v2rayn-manager.sh install
