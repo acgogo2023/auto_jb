@@ -62,7 +62,7 @@ while true; do
     fi
 done
 
-# 设置下载地址
+# 设置下载地址.
 if [ "$DOWNLOAD_CHOICE" = "1" ]; then
     DOWNLOAD_BASE_URL="${DOMESTIC_DOWNLOAD_URL}"
 else
@@ -804,4 +804,5 @@ while true; do
     
     echo
     read -p "按 Enter 键继续..."
+
 done
