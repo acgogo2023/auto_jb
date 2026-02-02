@@ -172,7 +172,7 @@ restart_service() {
     check_service_status $service_name
 }
 
-# 停止服务函数
+# 停止服务函数。
 stop_service() {
     local service_name=$1
     echo -e "${YELLOW}正在停止 $service_name 服务...${NC}"
@@ -805,3 +805,4 @@ while true; do
     echo
     read -p "按 Enter 键继续..."
 done
+
