@@ -6,7 +6,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # 没有颜色
 
-# 检测系统架构
+# 检测系统架构。
 detect_architecture() {
     local arch
     arch=$(uname -m)
@@ -806,3 +806,4 @@ while true; do
     read -p "按 Enter 键继续..."
 
 done
+
