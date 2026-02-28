@@ -1074,10 +1074,11 @@ main() {
         esac
                 
         echo
-        read -p "按 Enter 键继续..."
+        read -p "按 Enter 键继续...."
     done
 }
 
 # ============ 启动脚本 ============
 main "$@"
+
 
