@@ -1,62 +1,80 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-echo "开始安装 Xray-core..."
+echo "====== serv00 FreeBSD sing-box 一键安装 ======"
 
-WORKDIR=$HOME/xray
-PORT=10086
-UUID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen)
+WORKDIR=$HOME/singbox
+PORT=$((RANDOM%20000+10000))
+UUID=$(uuidgen)
 
 mkdir -p $WORKDIR
 cd $WORKDIR
 
-echo "下载 Xray-core..."
+echo "下载 sing-box..."
 
-fetch -o xray.zip https://github.com/XTLS/Xray-core/releases/latest/download/Xray-freebsd-64.zip
+fetch -o sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/latest/download/sing-box-freebsd-amd64.tar.gz
 
 echo "解压..."
 
-unzip -o xray.zip
+tar -xzf sing-box.tar.gz
+DIR=$(ls | grep sing-box)
 
-chmod +x xray
+mv $DIR/sing-box .
+chmod +x sing-box
+rm -rf $DIR sing-box.tar.gz
 
 echo "生成配置文件..."
 
 cat > config.json <<EOF
 {
-  "inbounds":[
+  "log": {
+    "level": "info"
+  },
+  "inbounds": [
     {
-      "port":$PORT,
-      "protocol":"vless",
-      "settings":{
-        "clients":[
-          {
-            "id":"$UUID"
-          }
-        ],
-        "decryption":"none"
-      },
-      "streamSettings":{
-        "network":"tcp"
+      "type": "vless",
+      "listen": "0.0.0.0",
+      "listen_port": $PORT,
+      "users": [
+        {
+          "uuid": "$UUID"
+        }
+      ],
+      "transport": {
+        "type": "tcp"
       }
     }
   ],
-  "outbounds":[
+  "outbounds": [
     {
-      "protocol":"freedom"
+      "type": "direct"
     }
   ]
 }
 EOF
 
+echo "启动 sing-box..."
+
+nohup ./sing-box run -c config.json > singbox.log 2>&1 &
+
+sleep 2
+
+IP=$(fetch -qo - https://api.ipify.org)
+
 echo ""
-echo "UUID: $UUID"
+echo "====== 安装完成 ======"
+echo ""
+echo "服务器IP: $IP"
 echo "端口: $PORT"
+echo "UUID: $UUID"
 echo ""
 
-echo "启动 Xray..."
+echo "VLESS链接："
 
-nohup ./xray run -config config.json > xray.log 2>&1 &
+echo "vless://$UUID@$IP:$PORT?encryption=none&type=tcp#serv00-singbox"
 
-echo "安装完成"
-echo "目录: $WORKDIR"
-echo "日志: $WORKDIR/xray.log"
+echo ""
+echo "查看日志:"
+echo "tail -f ~/singbox/singbox.log"
+echo ""
+echo "停止服务:"
+echo "pkill sing-box"
