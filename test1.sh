@@ -6,22 +6,31 @@ WORKDIR=$HOME/singbox
 PORT=$(jot -r 1 10000 30000)
 UUID=$(uuidgen)
 
-mkdir -p $WORKDIR
-cd $WORKDIR || exit
+mkdir -p "$WORKDIR"
+cd "$WORKDIR" || exit
 
 echo "工作目录: $WORKDIR"
 
-echo "获取最新版本..."
+echo "获取最新下载地址..."
 
-VERSION=$(fetch -qo - https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep tag_name | cut -d '"' -f4)
+URL=$(fetch -qo - https://api.github.com/repos/SagerNet/sing-box/releases/latest \
+| grep browser_download_url \
+| grep freebsd-amd64.tar.gz \
+| cut -d '"' -f4)
 
-echo "最新版本: $VERSION"
+if [ -z "$URL" ]; then
+    echo "获取下载地址失败"
+    exit 1
+fi
 
-FILE="sing-box-${VERSION#v}-freebsd-amd64.tar.gz"
+echo "下载地址:"
+echo "$URL"
 
-echo "下载 sing-box..."
+FILE=$(basename "$URL")
 
-fetch https://github.com/SagerNet/sing-box/releases/download/$VERSION/$FILE
+echo "开始下载..."
+
+fetch "$URL"
 
 if [ ! -f "$FILE" ]; then
     echo "下载失败"
@@ -30,15 +39,14 @@ fi
 
 echo "解压..."
 
-tar -xzf $FILE
+tar -xzf "$FILE"
 
 DIR=$(ls -d sing-box-* | head -n1)
 
-cp $DIR/sing-box .
+cp "$DIR/sing-box" .
 chmod +x sing-box
 
-rm -rf $DIR
-rm -f $FILE
+rm -rf "$DIR" "$FILE"
 
 echo "生成配置..."
 
@@ -56,10 +64,7 @@ cat > config.json <<EOF
         {
           "uuid": "$UUID"
         }
-      ],
-      "transport": {
-        "type": "tcp"
-      }
+      ]
     }
   ],
   "outbounds": [
@@ -89,7 +94,7 @@ echo "VLESS 链接:"
 echo ""
 echo "vless://$UUID@$IP:$PORT?encryption=none&type=tcp#serv00-singbox"
 echo ""
-echo "查看日志:"
+echo "日志查看:"
 echo "tail -f ~/singbox/singbox.log"
 echo ""
 echo "停止服务:"
