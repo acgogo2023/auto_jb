@@ -9,9 +9,9 @@ UUID=$(uuidgen)
 mkdir -p $WORKDIR
 cd $WORKDIR || exit
 
-echo "创建工作目录: $WORKDIR"
+echo "工作目录: $WORKDIR"
 
-echo "获取最新 sing-box 版本..."
+echo "获取最新版本..."
 
 VERSION=$(fetch -qo - https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep tag_name | cut -d '"' -f4)
 
@@ -28,16 +28,17 @@ if [ ! -f "$FILE" ]; then
     exit 1
 fi
 
-echo "解压文件..."
+echo "解压..."
 
 tar -xzf $FILE
 
-DIR=$(ls -d sing-box-*/ | head -n1)
+DIR=$(ls -d sing-box-* | head -n1)
 
 cp $DIR/sing-box .
 chmod +x sing-box
 
-rm -rf $DIR $FILE
+rm -rf $DIR
+rm -f $FILE
 
 echo "生成配置..."
 
@@ -88,7 +89,7 @@ echo "VLESS 链接:"
 echo ""
 echo "vless://$UUID@$IP:$PORT?encryption=none&type=tcp#serv00-singbox"
 echo ""
-echo "日志查看:"
+echo "查看日志:"
 echo "tail -f ~/singbox/singbox.log"
 echo ""
 echo "停止服务:"
