@@ -1036,29 +1036,9 @@ show_menu() {
     echo -e "${YELLOW}║${NC}  ${GREEN}7.${NC} 查看 FRP 日志                      ${YELLOW}║${NC}"
     echo -e "${YELLOW}║${NC}  ${GREEN}8.${NC} 版本管理（升级/回滚）              ${YELLOW}║${NC}"
     echo -e "${YELLOW}║${NC}  ${GREEN}9.${NC} 显示系统信息                       ${YELLOW}║${NC}"
-	echo -e "${YELLOW}║${NC}  ${GREEN}10.${NC} 安装为全局命令 frp                ${YELLOW}║${NC}"
     echo -e "${YELLOW}║${NC}  ${GREEN}0.${NC} 退出                               ${YELLOW}║${NC}"
     echo -e "${YELLOW}╚════════════════════════════════════════╝${NC}"
     echo ""
-}
-
-install_command() {
-    echo -e "${YELLOW}正在安装全局命令 frp...${NC}"
-
-    if [ ! -f "$0" ]; then
-        echo -e "${RED}无法找到当前脚本路径${NC}"
-        return 1
-    fi
-
-    cp "$0" /usr/local/bin/frp
-    chmod +x /usr/local/bin/frp
-
-    if [ -f "/usr/local/bin/frp" ]; then
-        echo -e "${GREEN}✅ 安装成功！${NC}"
-        echo -e "${GREEN}👉 现在可以直接输入: frp${NC}"
-    else
-        echo -e "${RED}❌ 安装失败${NC}"
-    fi
 }
 
 # ============ 主函数 ============
@@ -1141,9 +1121,6 @@ main() {
                 ;;
             9)
                 show_system_info
-                ;;
-			10)
-                install_command
                 ;;
             0)
                 echo -e "${GREEN}感谢使用 FRP 管理脚本！${NC}"
