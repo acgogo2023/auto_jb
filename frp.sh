@@ -15,7 +15,7 @@ NC='\033[0m'
 
 # ============ 全局变量定义 ============
 SCRIPT_VERSION="2.3.4"
-DEFAULT_VERSION="0.67.0"
+DEFAULT_VERSION="0.65.0"
 CURRENT_DIR=$(pwd)
 FRP_BASE_DIR="/opt/frp"
 VERSION_FILE="$FRP_BASE_DIR/.frp_version"
@@ -402,7 +402,7 @@ enter_frp_workdir() {
     return 0
 }
 
-# ============ 快速状态查看（优化版，无重复显示） ============
+# ============ 快速状态查看（优化版，集成FRPS配置信息但精简显示） ============
 quick_status() {
     echo -e "\n${YELLOW}━━━━━━━━━━━━━━━━ FRP 状态 ━━━━━━━━━━━━━━━━${NC}"
     
@@ -475,9 +475,40 @@ quick_status() {
         echo -e "${BLUE}📌 监听端口: ${ports:-无}${NC}"
     fi
     
+    # ===== FRPS配置信息显示（只显示访问地址，不显示配置详情）=====
+    if [ -n "$INSTALLED_VERSION" ]; then
+        local frp_dir="$FRP_BASE_DIR/frp_${INSTALLED_VERSION}_${ARCH}"
+        if [ -f "$frp_dir/frps.toml" ]; then
+            echo -e "\n${YELLOW}━━━━━━━━━━━━━ FRPS 访问地址 ━━━━━━━━━━━━━${NC}"
+            
+            # 获取web控制台端口
+            local web_port=$(grep -E "webServer.*port" "$frp_dir/frps.toml" 2>/dev/null | awk -F'=' '{print $2}' | tr -d ' "' | head -1)
+            [ -z "$web_port" ] && web_port="7500"
+            
+            # 获取本机IP地址
+            local local_ips=$(hostname -I 2>/dev/null | awk '{print $1}')
+            [ -z "$local_ips" ] && local_ips=$(ip addr show 2>/dev/null | grep -oE 'inet (192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+|172\.(1[6-9]|2[0-9]|3[0-1])\.[0-9]+\.[0-9]+)' | head -1 | awk '{print $2}')
+            
+            if [ -n "$local_ips" ]; then
+                echo -e "${GREEN}🌐 内网访问地址:${NC}"
+                for ip in $local_ips; do
+                    echo -e "  ➤ http://${ip}:${web_port}"
+                done
+            fi
+            
+            # 尝试获取公网IP
+            local public_ip=$(curl -s --connect-timeout 3 ifconfig.me 2>/dev/null || curl -s --connect-timeout 3 ipinfo.io/ip 2>/dev/null)
+            
+            if [ -n "$public_ip" ] && [[ "$public_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo -e "${GREEN}🌍 公网访问地址:${NC}"
+                echo -e "  ➤ http://${public_ip}:${web_port}"
+            fi
+        fi
+    fi
+    
     # ===== 当前版本 =====
     if [ -n "$INSTALLED_VERSION" ]; then
-        echo -e "${BLUE}📦 FRP版本: $INSTALLED_VERSION${NC}"
+        echo -e "\n${BLUE}📦 FRP版本: $INSTALLED_VERSION${NC}"
     fi
     
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -687,6 +718,34 @@ EOL
         nohup ./frps -c ./frps.toml > frps.nohup.log 2>&1 &
         echo -e "${GREEN}✅ FRPS 已启动（非服务模式）${NC}"
     fi
+    
+    # 显示配置信息
+    echo -e "\n${YELLOW}════════════════ FRPS 配置完成 ════════════════${NC}"
+    
+    # 获取本机IP地址
+    local local_ips=$(hostname -I 2>/dev/null | awk '{print $1}')
+    [ -z "$local_ips" ] && local_ips=$(ip addr show 2>/dev/null | grep -oE 'inet (192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+|172\.(1[6-9]|2[0-9]|3[0-1])\.[0-9]+\.[0-9]+)' | head -1 | awk '{print $2}')
+    
+    if [ -n "$local_ips" ]; then
+        echo -e "${GREEN}🌐 内网访问地址:${NC}"
+        for ip in $local_ips; do
+            echo -e "  ➤ http://${ip}:7500"
+        done
+    fi
+    
+    # 尝试获取公网IP
+    local public_ip=$(curl -s --connect-timeout 3 ifconfig.me 2>/dev/null)
+    
+    if [ -n "$public_ip" ] && [[ "$public_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo -e "${GREEN}🌍 公网访问地址:${NC}"
+        echo -e "  ➤ http://${public_ip}:7500"
+    fi
+    
+    echo -e "\n${YELLOW}📋 重要提示:${NC}"
+    echo "1. 请确保防火墙已开放端口: 7500"
+    echo "2. 路由器需要设置端口转发: 外部7500 → 本机IP:7500"
+    echo -e "\n${GREEN}📊 您可以在主菜单选择'4.查看 FRP 服务状态'查看访问信息${NC}"
+    echo -e "${YELLOW}════════════════════════════════════════════${NC}"
 }
 
 # ============ 配置和启动FRP主菜单 ============
@@ -893,7 +952,7 @@ version_management() {
             fi
             ;;
         2)
-            read -p "请输入要安装的FRP版本 (如 0.67.0): " CUSTOM_VERSION
+            read -p "请输入要安装的FRP版本 (如 0.65.0): " CUSTOM_VERSION
             if [ -z "$CUSTOM_VERSION" ]; then
                 echo -e "${RED}版本号不能为空${NC}"
                 return
@@ -977,9 +1036,29 @@ show_menu() {
     echo -e "${YELLOW}║${NC}  ${GREEN}7.${NC} 查看 FRP 日志                      ${YELLOW}║${NC}"
     echo -e "${YELLOW}║${NC}  ${GREEN}8.${NC} 版本管理（升级/回滚）              ${YELLOW}║${NC}"
     echo -e "${YELLOW}║${NC}  ${GREEN}9.${NC} 显示系统信息                       ${YELLOW}║${NC}"
+	echo -e "${YELLOW}║${NC}  ${GREEN}10.${NC} 安装为全局命令 frp                ${YELLOW}║${NC}"
     echo -e "${YELLOW}║${NC}  ${GREEN}0.${NC} 退出                               ${YELLOW}║${NC}"
     echo -e "${YELLOW}╚════════════════════════════════════════╝${NC}"
     echo ""
+}
+
+install_command() {
+    echo -e "${YELLOW}正在安装全局命令 frp...${NC}"
+
+    if [ ! -f "$0" ]; then
+        echo -e "${RED}无法找到当前脚本路径${NC}"
+        return 1
+    fi
+
+    cp "$0" /usr/local/bin/frp
+    chmod +x /usr/local/bin/frp
+
+    if [ -f "/usr/local/bin/frp" ]; then
+        echo -e "${GREEN}✅ 安装成功！${NC}"
+        echo -e "${GREEN}👉 现在可以直接输入: frp${NC}"
+    else
+        echo -e "${RED}❌ 安装失败${NC}"
+    fi
 }
 
 # ============ 主函数 ============
@@ -1062,6 +1141,9 @@ main() {
                 ;;
             9)
                 show_system_info
+                ;;
+			10)
+                install_command
                 ;;
             0)
                 echo -e "${GREEN}感谢使用 FRP 管理脚本！${NC}"
