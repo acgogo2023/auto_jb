@@ -15,7 +15,7 @@ NC='\033[0m'
 
 # ============ 全局变量定义 ============
 SCRIPT_VERSION="2.3.4"
-DEFAULT_VERSION="0.69.0"
+DEFAULT_VERSION="0.69.1"
 CURRENT_DIR=$(pwd)
 FRP_BASE_DIR="/opt/frp"
 VERSION_FILE="$FRP_BASE_DIR/.frp_version"
@@ -952,7 +952,7 @@ version_management() {
             fi
             ;;
         2)
-            read -p "请输入要安装的FRP版本 (如 0.69.0): " CUSTOM_VERSION
+            read -p "请输入要安装的FRP版本 (如 0.69.1): " CUSTOM_VERSION
             if [ -z "$CUSTOM_VERSION" ]; then
                 echo -e "${RED}版本号不能为空${NC}"
                 return
