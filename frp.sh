@@ -105,8 +105,14 @@ download_frp_once() {
     
     INTERNATIONAL_DOWNLOAD_URL="https://github.com/fatedier/frp/releases/download/v"
     DOMESTIC_DOWNLOAD_URL="https://gitee.com/git220/frp/releases/download/v"
+    # 前缀式加速镜像: 直接代理官方 release 路径（官方包原样透传，下载后仍会做完整性校验）
+    MIRROR_DOWNLOAD_URLS=(
+        "https://gh-proxy.com/https://github.com/fatedier/frp/releases/download/v"
+        "https://ghfast.top/https://github.com/fatedier/frp/releases/download/v"
+        "https://ghproxy.net/https://github.com/fatedier/frp/releases/download/v"
+    )
     
-    echo -e "\n${YELLOW}请选择下载地址：${NC}"
+    echo -e "\n${YELLOW}请选择首选下载地址（失败会自动切换到其它源/镜像）：${NC}"
     echo "1. 国内 (Gitee)"
     echo "2. 国际 (GitHub)"
     
@@ -126,30 +132,48 @@ download_frp_once() {
     if [ "$DOWNLOAD_CHOICE" = "1" ]; then
         DOWNLOAD_BASE_URL="${DOMESTIC_DOWNLOAD_URL}"
         SOURCE_NAME="Gitee"
+        DOWNLOAD_CANDIDATES=("${DOMESTIC_DOWNLOAD_URL}" "${INTERNATIONAL_DOWNLOAD_URL}" "${MIRROR_DOWNLOAD_URLS[@]}")
     else
         DOWNLOAD_BASE_URL="${INTERNATIONAL_DOWNLOAD_URL}"
         SOURCE_NAME="GitHub"
+        DOWNLOAD_CANDIDATES=("${INTERNATIONAL_DOWNLOAD_URL}" "${DOMESTIC_DOWNLOAD_URL}" "${MIRROR_DOWNLOAD_URLS[@]}")
     fi
     
-    local DOWNLOAD_URL="${DOWNLOAD_BASE_URL}${target_version}/${FRP_TAR}"
-    
-    echo -e "${GREEN}下载源: $SOURCE_NAME${NC}"
+    echo -e "${GREEN}首选下载源: $SOURCE_NAME${NC}"
     echo -e "${GREEN}版本: $target_version${NC}"
     
     cd "$FRP_BASE_DIR" || exit 1
     
-    if [ ! -f "$FRP_TAR" ]; then
+    if [ -f "$FRP_TAR" ]; then
+        echo -e "${GREEN}FRP 安装包已存在，跳过下载。${NC}"
+    else
         echo -e "${GREEN}正在下载 FRP ${target_version}...${NC}"
-        if curl -L --progress-bar -o "$FRP_TAR" "$DOWNLOAD_URL"; then
-            echo -e "${GREEN}下载成功！${NC}"
-        else
-            echo -e "${RED}下载失败，请检查网络连接${NC}"
+        local DOWNLOAD_OK=0
+        local base DOWNLOAD_URL
+        for base in "${DOWNLOAD_CANDIDATES[@]}"; do
+            DOWNLOAD_URL="${base}${target_version}/${FRP_TAR}"
+            rm -f "$FRP_TAR"
+            echo -e "${YELLOW}尝试下载源: ${DOWNLOAD_URL}${NC}"
+            if curl -fL --connect-timeout 10 --max-time 300 --speed-limit 4096 --speed-time 15 --progress-bar -o "$FRP_TAR" "$DOWNLOAD_URL"; then
+                # 校验下载物: 必须能解出预期目录中的 frpc，避免把错误页/半截文件当安装包
+                if tar -tzf "$FRP_TAR" >/dev/null 2>&1 && tar -tzf "$FRP_TAR" 2>/dev/null | grep -q "${FRP_DIR_NAME}/frpc"; then
+                    echo -e "${GREEN}下载成功！${NC}"
+                    DOWNLOAD_OK=1
+                    break
+                else
+                    echo -e "${RED}文件校验失败（可能拿到了错误页），换下一个源...${NC}"
+                fi
+            else
+                echo -e "${RED}该源不可用，换下一个源...${NC}"
+            fi
+        done
+        if [ "$DOWNLOAD_OK" != "1" ]; then
+            echo -e "${RED}所有下载源都失败，请检查网络连接${NC}"
+            rm -f "$FRP_TAR"
             rm -f "$LOCK_FILE"
             cd "$CURRENT_DIR" || exit 1
             return 1
         fi
-    else
-        echo -e "${GREEN}FRP 安装包已存在，跳过下载。${NC}"
     fi
     
     if [ ! -d "$FRP_DIR_NAME" ]; then
